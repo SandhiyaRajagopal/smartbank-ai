@@ -75,9 +75,10 @@ export async function streamSSE(path, body, onEvent) {
   }
 }
 
+// The token is sent as the first WebSocket message, never in the URL (URLs end up in server logs).
 export function wsUrl() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-  return `${proto}://${location.host}/ws?token=${encodeURIComponent(auth.token || '')}`
+  return `${proto}://${location.host}/ws`
 }
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })

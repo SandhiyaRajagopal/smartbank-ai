@@ -18,8 +18,8 @@ class Hub:
         self.connections: dict[int, set[WebSocket]] = defaultdict(set)
         self.loop: asyncio.AbstractEventLoop | None = None
 
-    async def connect(self, customer_id: int, ws: WebSocket) -> None:
-        await ws.accept()
+    def connect(self, customer_id: int, ws: WebSocket) -> None:
+        """Register an already-accepted, authenticated connection."""
         self.connections[customer_id].add(ws)
 
     def disconnect(self, customer_id: int, ws: WebSocket) -> None:

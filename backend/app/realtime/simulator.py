@@ -8,6 +8,7 @@ and pushes the result to the customer's browser over WebSocket.
 import asyncio
 import logging
 import random
+from datetime import datetime
 
 from ..config import settings
 from ..db.seed import SPEND
@@ -36,13 +37,14 @@ def _random_normal_txn(rng: random.Random, city: str) -> dict:
                 channel=channel, city=city, country="IN")
 
 
-def simulate_transaction(customer_id: int, suspicious: bool = False, rng: random.Random | None = None) -> dict:
+def simulate_transaction(customer_id: int, suspicious: bool = False, rng: random.Random | None = None,
+                         ts: datetime | None = None) -> dict:
     """Create one live transaction and return the events to push to the customer's browser."""
     rng = rng or random.Random()
     with db_session() as db:
         city = banking.get_customer(db, customer_id).city
         spec = rng.choice(SUSPICIOUS_SCENARIOS) if suspicious else _random_normal_txn(rng, city)
-        txn, alert = banking.record_transaction(db, customer_id, **spec)
+        txn, alert = banking.record_transaction(db, customer_id, ts=ts, **spec)
         db.flush()
         events = [{"type": "transaction", "data": banking.txn_to_dict(txn)},
                   {"type": "accounts", "data": banking.list_accounts(db, customer_id)}]

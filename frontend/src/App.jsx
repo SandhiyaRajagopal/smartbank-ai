@@ -52,11 +52,16 @@ function Bank({ user, onLogout }) {
     let ws, retry, closed = false
     const connect = () => {
       ws = new WebSocket(wsUrl())
-      ws.onopen = () => setConnected(true)
-      ws.onclose = () => { setConnected(false); if (!closed) retry = setTimeout(connect, 3000) }
+      ws.onopen = () => ws.send(JSON.stringify({ token: auth.token }))
+      ws.onclose = (e) => {
+        setConnected(false)
+        if (e.code === 4401) { window.dispatchEvent(new Event('smartbank:logout')); return }  // session expired
+        if (!closed) retry = setTimeout(connect, 3000)
+      }
       ws.onmessage = (msg) => {
         const { type, data } = JSON.parse(msg.data)
-        if (type === 'transaction') {
+        if (type === 'ready') setConnected(true)
+        else if (type === 'transaction') {
           setTransactions((ts) => [data, ...ts.filter((t) => t.id !== data.id)].slice(0, 40))
           setFreshIds((s) => new Set(s).add(data.id))
         } else if (type === 'accounts') {

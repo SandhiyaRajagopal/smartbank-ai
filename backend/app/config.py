@@ -4,6 +4,7 @@ load_dotenv() runs first so that LangSmith's LANGSMITH_* variables are in
 os.environ before any LangChain/LangGraph module is imported - that is all
 LangSmith needs to start tracing every graph run automatically.
 """
+import os
 import secrets
 from pathlib import Path
 
@@ -12,6 +13,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT_DIR / ".env")
+
+# Tracing without a key only produces 401 errors in the log, so switch it off until a key is set.
+if os.environ.get("LANGSMITH_TRACING", "").lower() == "true" and not os.environ.get("LANGSMITH_API_KEY"):
+    os.environ["LANGSMITH_TRACING"] = "false"
 
 
 class Settings(BaseSettings):
@@ -23,7 +28,8 @@ class Settings(BaseSettings):
     # Production on GCP: use Vertex AI with the service account instead of an API key.
     use_vertexai: bool = False
     gcp_project: str = ""
-    gcp_location: str = "asia-south1"
+    # Vertex AI endpoint for Gemini (newest models are served from "global"); independent of where Cloud Run runs
+    gcp_location: str = "global"
 
     # empty -> a random secret is generated at startup (logins then reset when the server restarts)
     jwt_secret: str = ""

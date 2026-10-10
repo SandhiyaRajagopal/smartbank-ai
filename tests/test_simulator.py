@@ -1,4 +1,5 @@
 import random
+from datetime import datetime
 
 import pytest
 
@@ -19,7 +20,8 @@ def test_every_suspicious_scenario_is_high_risk_for_every_customer(customer_id, 
 
 
 def test_normal_transactions_are_low_risk():
-    result = simulate_transaction(1, suspicious=False, rng=random.Random(7))
+    # fixed daytime timestamp: at night the "unusual hour" rule (correctly) adds risk
+    result = simulate_transaction(1, suspicious=False, rng=random.Random(7), ts=datetime.now().replace(hour=14))
     assert result["events"][0]["data"]["risk_level"] == "LOW"
 
 

@@ -3,6 +3,7 @@
 Every agent gets its model from here, so switching model (or switching from
 the AI Studio API key to Vertex AI on GCP) is a one-line config change.
 """
+import os
 from functools import lru_cache
 
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
@@ -16,6 +17,7 @@ class LLMNotConfigured(RuntimeError):
 
 def _auth_kwargs() -> dict:
     if settings.use_vertexai:
+        os.environ.setdefault("GOOGLE_CLOUD_PROJECT", settings.gcp_project)  # used by google-auth for quota
         return {"vertexai": True, "project": settings.gcp_project, "location": settings.gcp_location}
     if not settings.google_api_key:
         raise LLMNotConfigured("GOOGLE_API_KEY is not set. Add it to your .env file.")

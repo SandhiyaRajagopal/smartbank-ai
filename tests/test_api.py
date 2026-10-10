@@ -131,7 +131,9 @@ def test_invalid_conversation_id_rejected(client, llm_ready):
 def test_websocket_pushes_live_suspicious_transaction(client):
     headers = login(client, "priya")
     token = headers["Authorization"].split()[1]
-    with client.websocket_connect(f"/ws?token={token}") as ws:
+    with client.websocket_connect("/ws") as ws:
+        ws.send_json({"token": token})
+        assert ws.receive_json()["type"] == "ready"
         txn = client.post("/api/demo/simulate", json={"suspicious": True}, headers=headers).json()
         assert txn["risk_level"] == "HIGH"
         received = [ws.receive_json()["type"] for _ in range(3)]
@@ -140,6 +142,8 @@ def test_websocket_pushes_live_suspicious_transaction(client):
 
 def test_websocket_rejects_bad_token(client):
     from starlette.websockets import WebSocketDisconnect
-    with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect("/ws?token=bad") as ws:
+    with pytest.raises(WebSocketDisconnect) as closed:
+        with client.websocket_connect("/ws") as ws:
+            ws.send_json({"token": "bad"})
             ws.receive_json()
+    assert closed.value.code == 4401
