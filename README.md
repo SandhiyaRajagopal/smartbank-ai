@@ -52,15 +52,17 @@ Architecture with Multi-Agent Automation using Experimental Models"*.
 
 ## Quick start
 
-### 1. Get API keys (both free)
-- **Gemini:** https://aistudio.google.com/apikey
-- **LangSmith** (optional, for tracing): https://smith.langchain.com → Settings → API Keys
+### 1. Choose how to reach Gemini
+- **Option A, AI Studio key (simplest):** free key from https://aistudio.google.com/apikey → `GOOGLE_API_KEY`
+- **Option B, Vertex AI (used in production):** `gcloud auth application-default login`, then set
+  `USE_VERTEXAI=true` and `GCP_PROJECT=<your project>` (no API key needed)
+- **LangSmith** (optional, for tracing): https://smith.langchain.com → Settings → API Keys → `LANGSMITH_API_KEY`
 
 ### 2. Configure
 ```bash
 cp .env.example .env
 ```
-Then open `.env` and paste your `GOOGLE_API_KEY` (and `LANGSMITH_API_KEY`). `.env` is gitignored.
+Then open `.env` and fill in the option you chose. `.env` is gitignored.
 
 ### 3a. Run with Docker (recommended)
 ```bash
@@ -83,6 +85,12 @@ npm install
 npm run dev
 ```
 Open **http://localhost:5173**. Vite forwards `/api` and `/ws` to the backend on port 8000.
+
+### 3c. Deploy to Google Cloud Run
+```powershell
+.\deploy\deploy.ps1
+```
+Builds the Dockerfile with Cloud Build and runs it on Cloud Run with Gemini on Vertex AI. See **[DEPLOY.md](DEPLOY.md)** for the one-time setup (service accounts, secrets, budget).
 
 ### Run the tests
 ```bash
@@ -119,7 +127,8 @@ See **[ARCHITECTURE.md](ARCHITECTURE.md)** for the full design, the decisions be
 **LLM:** Google Gemini (`gemini-3.8-flash`, embeddings `gemini-embedding-001`) ·
 **Agents:** LangGraph 1.x + LangChain · **Tracing:** LangSmith ·
 **Backend:** FastAPI, SQLAlchemy, SQLite · **RAG:** Chroma + rank-bm25 ·
-**Frontend:** React 19, Vite, Tailwind CSS 4 · **Packaging:** Docker (multi-stage)
+**Frontend:** React 19, Vite, Tailwind CSS 4 · **Packaging:** Docker (multi-stage) ·
+**Cloud:** Google Cloud Run, Vertex AI, Cloud Build, Secret Manager
 
 ## Project layout
 ```

@@ -1,27 +1,30 @@
 # Stores the app's secrets in Google Secret Manager so they never live in the
 # container image or in Cloud Run's plain environment variables.
 #
-#   langsmith-api-key  <- LANGSMITH_API_KEY from your local .env
+#   langsmith-api-key  <- LANGSMITH_API_KEY from your local .env (skipped if empty)
 #   jwt-secret         <- a newly generated random value (signs login tokens)
 #
-# Run from the project root after `gcloud config set project <id>`:
+# Values are never printed. Run from the project root after `gcloud config set project <id>`:
 #   .\deploy\create_secrets.ps1
 
-$ErrorActionPreference = "Stop"
+# gcloud.cmd (not the gcloud.ps1 wrapper) so gcloud's informational stderr isn't treated as an error
+$gcloud = "gcloud.cmd"
 
 function Set-Secret([string]$name, [string]$value) {
     $tmp = New-TemporaryFile
     try {
         # write without a trailing newline or BOM so the secret is exactly the value
         [System.IO.File]::WriteAllText($tmp.FullName, $value)
-        gcloud secrets describe $name *> $null
-        if ($LASTEXITCODE -eq 0) {
-            gcloud secrets versions add $name --data-file="$($tmp.FullName)" | Out-Null
-            Write-Host "updated secret $name"
+        $existing = & $gcloud secrets list --format="value(name)" 2>$null | Where-Object { ($_ -split '/')[-1] -eq $name }
+        if ($existing) {
+            & $gcloud secrets versions add $name --data-file="$($tmp.FullName)" --quiet 2>$null | Out-Null
+            $verb = "updated"
         } else {
-            gcloud secrets create $name --replication-policy=automatic --data-file="$($tmp.FullName)" | Out-Null
-            Write-Host "created secret $name"
+            & $gcloud secrets create $name --replication-policy=automatic --data-file="$($tmp.FullName)" --quiet 2>$null | Out-Null
+            $verb = "created"
         }
+        if ($LASTEXITCODE -ne 0) { throw "failed to store secret $name" }
+        Write-Host "$verb secret $name"
     } finally {
         Remove-Item $tmp.FullName -Force
     }
@@ -30,7 +33,7 @@ function Set-Secret([string]$name, [string]$value) {
 $envFile = Join-Path $PSScriptRoot "..\.env"
 if (-not (Test-Path $envFile)) { throw ".env not found - copy .env.example to .env and add your keys first." }
 
-$langsmith = (Get-Content $envFile | Where-Object { $_ -match '^LANGSMITH_API_KEY=(.+)$' } | ForEach-Object { $Matches[1].Trim() }) | Select-Object -First 1
+$langsmith = Get-Content $envFile | Where-Object { $_ -match '^LANGSMITH_API_KEY=(.+)$' } | ForEach-Object { $Matches[1].Trim() } | Select-Object -First 1
 if ($langsmith) { Set-Secret "langsmith-api-key" $langsmith } else { Write-Warning "LANGSMITH_API_KEY is empty in .env - LangSmith tracing will be off in the cloud." }
 
 $bytes = New-Object byte[] 48
