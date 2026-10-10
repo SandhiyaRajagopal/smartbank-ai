@@ -8,9 +8,12 @@ RUN npm run build
 
 # ---------- Stage 2: Python runtime (FastAPI serves API + built UI) ----------
 FROM python:3.12-slim
+# TZ: the simulated bank and its customers are in India - fraud rules like "unusual hour"
+# must use IST, not the container's default UTC. (POSIX form: works without tzdata.)
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    TZ=IST-5:30
 WORKDIR /app
 
 COPY requirements.txt .
