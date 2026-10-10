@@ -3,7 +3,9 @@
 # Prerequisites (one-time): gcloud login, project set, APIs enabled, service account
 # + secrets created - see DEPLOY.md.
 
-$PROJECT = (& gcloud.cmd config get-value project 2>$null)
+. (Join-Path $PSScriptRoot "gcloud_path.ps1")   # sets $gcloud
+
+$PROJECT = (& $gcloud config get-value project 2>$null)
 $REGION = "asia-south1"                      # Mumbai - where the service runs
 $SERVICE = "smartbank-ai"
 $SA = "smartbank-run@$PROJECT.iam.gserviceaccount.com"            # identity the app runs as
@@ -22,13 +24,13 @@ $envVars = @(
 ) -join ","
 
 $secrets = @("JWT_SECRET=jwt-secret:latest")
-$existing = & gcloud.cmd secrets list --format="value(name)" 2>$null | ForEach-Object { ($_ -split '/')[-1] }
+$existing = & $gcloud secrets list --format="value(name)" 2>$null | ForEach-Object { ($_ -split '/')[-1] }
 if ($existing -contains "langsmith-api-key") { $secrets += "LANGSMITH_API_KEY=langsmith-api-key:latest" }
 
 # max-instances=1: SQLite and the in-process WebSocket hub live inside one instance.
 # min-instances=1: no cold start for evaluators; data re-seeds only on redeploy.
 # timeout=3600: lets WebSocket connections stay open up to an hour.
-& gcloud.cmd run deploy $SERVICE `
+& $gcloud run deploy $SERVICE `
     --source . `
     --region $REGION `
     --service-account $SA `
@@ -42,6 +44,6 @@ if ($existing -contains "langsmith-api-key") { $secrets += "LANGSMITH_API_KEY=la
     --quiet
 
 if ($LASTEXITCODE -eq 0) {
-    $url = & gcloud.cmd run services describe $SERVICE --region $REGION --format="value(status.url)" 2>$null
+    $url = & $gcloud run services describe $SERVICE --region $REGION --format="value(status.url)" 2>$null
     Write-Host "`nDeployed: $url"
 }

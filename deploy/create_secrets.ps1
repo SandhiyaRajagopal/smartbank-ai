@@ -7,15 +7,16 @@
 # Values are never printed. Run from the project root after `gcloud config set project <id>`:
 #   .\deploy\create_secrets.ps1
 
-# gcloud.cmd (not the gcloud.ps1 wrapper) so gcloud's informational stderr isn't treated as an error
-$gcloud = "gcloud.cmd"
+. (Join-Path $PSScriptRoot "gcloud_path.ps1")   # sets $gcloud
 
 function Set-Secret([string]$name, [string]$value) {
     $tmp = New-TemporaryFile
     try {
         # write without a trailing newline or BOM so the secret is exactly the value
         [System.IO.File]::WriteAllText($tmp.FullName, $value)
-        $existing = & $gcloud secrets list --format="value(name)" 2>$null | Where-Object { ($_ -split '/')[-1] -eq $name }
+        $all = & $gcloud secrets list --format="value(name)" 2>$null
+        if ($LASTEXITCODE -ne 0) { throw "could not list secrets - is gcloud logged in and the project set?" }
+        $existing = $all | Where-Object { ($_ -split '/')[-1] -eq $name }
         if ($existing) {
             & $gcloud secrets versions add $name --data-file="$($tmp.FullName)" --quiet 2>$null | Out-Null
             $verb = "updated"
