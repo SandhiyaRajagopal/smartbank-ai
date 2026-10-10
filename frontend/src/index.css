@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/* Design tokens: one place to change the look of the whole app */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-900: #134e4a;
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+  --color-line: #e2e8f0;
+  --color-canvas: #f6f7f9;
+}
+
+html, body, #root { height: 100%; }
+body { background: var(--color-canvas); color: var(--color-ink); -webkit-font-smoothing: antialiased; }
+
+/* markdown inside chat bubbles */
+.prose-chat p { margin: 0.35rem 0; }
+.prose-chat ul, .prose-chat ol { margin: 0.35rem 0; padding-left: 1.2rem; }
+.prose-chat ul { list-style: disc; }
+.prose-chat ol { list-style: decimal; }
+.prose-chat li { margin: 0.15rem 0; }
+.prose-chat strong { font-weight: 600; }
+.prose-chat h1, .prose-chat h2, .prose-chat h3 { font-weight: 600; margin: 0.6rem 0 0.25rem; }
+.prose-chat table { border-collapse: collapse; margin: 0.5rem 0; font-size: 0.8rem; display: block; overflow-x: auto; }
+.prose-chat th, .prose-chat td { border: 1px solid var(--color-line); padding: 0.25rem 0.5rem; text-align: left; white-space: nowrap; }
+.prose-chat th { background: #f8fafc; font-weight: 600; }
+.prose-chat code { font-family: var(--font-mono); font-size: 0.8em; background: #f1f5f9; padding: 0 0.25rem; border-radius: 4px; }
+
+@keyframes slide-in { from { transform: translateY(-8px); opacity: 0 } to { transform: none; opacity: 1 } }
+.animate-slide-in { animation: slide-in 0.25s ease-out; }
+@keyframes flash { from { background: #fef9c3 } to { background: transparent } }
+.animate-flash { animation: flash 2s ease-out; }

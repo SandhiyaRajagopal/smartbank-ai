@@ -1,0 +1,16 @@
+services:
+  smartbank:
+    build: .
+    image: smartbank-ai:latest
+    container_name: smartbank-ai
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false   # the app still starts without keys; the chat explains what's missing
+    volumes:
+      - smartbank-data:/app/data   # keeps the database, chat memory and vector index across restarts
+    restart: unless-stopped
+
+volumes:
+  smartbank-data:
