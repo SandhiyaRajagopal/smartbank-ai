@@ -53,6 +53,27 @@ notifications (SMS/email), and model training. Each is listed under *Future work
  └─────────────────────┘
 ```
 
+### The LangGraph workflow (`backend/app/agents/graph.py`)
+
+```mermaid
+flowchart TD
+    START([START]) --> guardrail[Guardrail<br/>mask PII, block injection]
+    guardrail -- blocked --> aggregate
+    guardrail --> supervisor[Supervisor · Gemini<br/>intent + ordered agent plan]
+    supervisor --> dispatch{Dispatch}
+    dispatch -- next agent in plan --> customer[Customer agent]
+    dispatch -- next agent in plan --> fraud[Fraud & Risk agent]
+    dispatch -- next agent in plan --> credit[Credit & Loan agent]
+    dispatch -- next agent in plan --> compliance[Compliance agent · RAG]
+    customer & fraud & credit & compliance -- no sensitive action --> dispatch
+    fraud & credit -- sensitive tool requested --> approval[[Approval · interrupt&#40;&#41;<br/>waits for Confirm / Cancel]]
+    approval --> dispatch
+    dispatch -- plan finished --> aggregate[Aggregate<br/>1 answer passes through · 2+ merged by Gemini]
+    aggregate --> END([END])
+```
+
+`Dispatch` is a conditional edge, not a node. The SQLite checkpointer saves the state after every node, which gives conversation memory and lets the approval step pause and resume.
+
 **Single source of truth.** The REST endpoints that render the dashboard, the agents' tools and the
 real-time simulator all call the same functions in `services/banking.py`. The assistant can therefore
 never contradict what the dashboard shows.
