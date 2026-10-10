@@ -11,6 +11,9 @@ _tmp = Path(tempfile.mkdtemp(prefix="smartbank_test_"))
 os.environ["DATABASE_URL"] = f"sqlite:///{(_tmp / 'test.db').as_posix()}"
 os.environ["LANGSMITH_TRACING"] = "false"
 os.environ["GOOGLE_API_KEY"] = ""
+os.environ["CHECKPOINT_DB"] = str(_tmp / "checkpoints.db")
+os.environ["CHROMA_DIR"] = str(_tmp / "chroma")
+os.environ["SIMULATOR_ENABLED"] = "false"
 
 import pytest  # noqa: E402
 

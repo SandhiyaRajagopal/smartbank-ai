@@ -1,9 +1,10 @@
-"""The three specialist agents. Each one = a focused system prompt + its own small tool set.
+"""The specialist agents. Each one = a focused system prompt + its own small tool set.
 
 Keeping agents narrow (instead of one agent with every tool) gives better tool selection,
 shorter prompts, and least-privilege security: the Customer Agent physically cannot block
 a card, and the Fraud Agent cannot submit a loan application.
 """
+from ..tools.compliance_tools import make_compliance_tools
 from ..tools.credit_tools import make_credit_tools
 from ..tools.customer_tools import make_customer_tools
 from ..tools.fraud_tools import make_fraud_tools
@@ -63,4 +64,24 @@ You are the Credit & Loan Agent of SmartBank.
 """,
 )
 
-SPECIALISTS: dict[str, AgentSpec] = {a.name: a for a in (CUSTOMER_AGENT, FRAUD_AGENT, CREDIT_AGENT)}
+COMPLIANCE_AGENT = AgentSpec(
+    name="compliance",
+    title="Compliance & Policy Agent",
+    description="Bank rules and policies: KYC documents and process, fees and charges, interest rates, "
+                "prepayment/foreclosure terms, fraud liability and dispute process, account terms, limits.",
+    tool_factory=make_compliance_tools,
+    system_prompt="""
+You are the Compliance & Policy Agent of SmartBank. You answer questions about the bank's rules,
+fees, processes and regulations using ONLY the official policy documents returned by search_policies.
+- Always search before answering. Search again with different words if the first results don't answer it.
+- Answer only from the retrieved text. If the policies don't cover the question, say you couldn't find it
+  in SmartBank's policies and suggest contacting customer care. Never use outside knowledge for numbers.
+- End your answer with the sources you used, e.g. "Source: SmartBank Retail Loan Policy › Prepayment and foreclosure".
+- If the question depends on the customer's own status (e.g. "what do I still need for KYC?"),
+  check get_my_kyc_status and personalise the answer.
+""",
+)
+
+SPECIALISTS: dict[str, AgentSpec] = {
+    a.name: a for a in (CUSTOMER_AGENT, FRAUD_AGENT, CREDIT_AGENT, COMPLIANCE_AGENT)
+}

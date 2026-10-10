@@ -19,7 +19,7 @@ from .specialists import SPECIALISTS
 
 log = logging.getLogger("smartbank.supervisor")
 
-AgentName = Literal["customer", "fraud", "credit"]
+AgentName = Literal["customer", "fraud", "credit", "compliance"]
 MAX_STEPS = 3
 
 
@@ -53,6 +53,8 @@ Instructions:
   (e.g. check fraud before discussing a new loan).
 - Resolve follow-ups using the conversation (e.g. "what about 5 years?" after a loan discussion
   -> credit agent, with the loan type and amount repeated in the task).
+- Questions about the bank's rules, fees, documents, charges or processes go to compliance;
+  questions about the customer's OWN numbers (balance, eligibility, score) go to the data agents.
 - If the customer says "yes / go ahead / block it" after an agent suggested an action, route it back to
   that same agent with a task that states the action clearly.
 - Greetings, thanks, and non-banking questions: no steps, give a short direct_response.
@@ -61,18 +63,24 @@ Instructions:
 
 # ---------- keyword fallback (used only if the LLM call fails) ----------
 KEYWORDS = {
-    "fraud": r"fraud|suspicious|unrecogni[sz]e|scam|stolen|block|freeze|hack|didn'?t make|not me|dispute|risk",
-    "credit": r"loan|emi|credit score|cibil|eligib|borrow|interest rate|mortgage|apply",
+    "fraud": r"fraud|suspicious|unrecogni[sz]e|scam|stolen|block|freeze|hack|didn'?t make|not me|risk",
+    "compliance": r"polic(?:y|ies)|rules?\b|fees?\b|charges\b|documents?|foreclos|prepay|penalt|minimum balance|"
+                  r"dispute|liabilit|terms",
+    "credit": r"loan|emi\b|credit score|cibil|eligib|borrow|interest rate|mortgage|apply",
     "customer": r"balance|transaction|spend|statement|account|profile|kyc|history|payment|card",
 }
 
 
 def keyword_route(text: str) -> RouteDecision:
     text_l = text.lower()
-    steps = [RouteStep(agent=name, task=text) for name, pattern in KEYWORDS.items() if re.search(pattern, text_l)]
-    # "card" alone is a customer question unless a fraud word is also present
-    if any(s.agent == "fraud" for s in steps):
-        steps = [s for s in steps if s.agent != "customer" or re.search(r"balance|spend|statement", text_l)]
+    hits = [name for name, pattern in KEYWORDS.items() if re.search(pattern, text_l)]
+    if "fraud" in hits:
+        # security first: "card"/"charges" in a fraud message are about the fraud, not general questions
+        hits = [h for h in hits if h not in ("customer", "compliance")]
+    elif "compliance" in hits:
+        # a rules/fees question mentioning loans or accounts is still a policy question
+        hits = ["compliance"]
+    steps = [RouteStep(agent=name, task=text) for name in hits]
     if not steps:
         return RouteDecision(intent="unknown", reasoning="keyword fallback: no banking keywords",
                              direct_response="I can help with your balance, transactions, spending, card "

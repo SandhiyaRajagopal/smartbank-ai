@@ -4,6 +4,7 @@ load_dotenv() runs first so that LangSmith's LANGSMITH_* variables are in
 os.environ before any LangChain/LangGraph module is imported - that is all
 LangSmith needs to start tracing every graph run automatically.
 """
+import secrets
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -24,7 +25,8 @@ class Settings(BaseSettings):
     gcp_project: str = ""
     gcp_location: str = "asia-south1"
 
-    jwt_secret: str = "dev-only-secret-change-me"
+    # empty -> a random secret is generated at startup (logins then reset when the server restarts)
+    jwt_secret: str = ""
     jwt_expire_minutes: int = 12 * 60
     database_url: str = f"sqlite:///{(ROOT_DIR / 'data' / 'smartbank.db').as_posix()}"
     checkpoint_db: str = str(ROOT_DIR / "data" / "checkpoints.db")
@@ -42,4 +44,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+if len(settings.jwt_secret) < 32:
+    settings.jwt_secret = secrets.token_urlsafe(48)
 (ROOT_DIR / "data").mkdir(exist_ok=True)

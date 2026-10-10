@@ -18,6 +18,12 @@ def test_keyword_router_multi_intent():
     assert agents(keyword_route("Any fraud on my account? Then check my loan eligibility")) == ["fraud", "credit"]
 
 
+def test_keyword_router_policy_questions_go_to_compliance():
+    assert agents(keyword_route("What are the foreclosure charges on a personal loan?")) == ["compliance"]
+    assert agents(keyword_route("Which documents do I need for KYC?")) == ["compliance"]
+    assert agents(keyword_route("There's a suspicious charge on my card")) == ["fraud"]
+
+
 def test_keyword_router_out_of_scope_gives_direct_response():
     d = keyword_route("What's the weather in Chennai?")
     assert d.steps == [] and d.direct_response
