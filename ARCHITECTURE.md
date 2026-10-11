@@ -57,18 +57,22 @@ notifications (SMS/email), and model training. Each is listed under *Future work
 
 ```mermaid
 flowchart TD
-    startNode(["START"]) --> guardrail["Guardrail<br/>mask PII, block injection"]
-    guardrail -- "blocked" --> aggregate
-    guardrail --> supervisor["Supervisor · Gemini<br/>intent + ordered agent plan"]
+    startNode(["START"]) --> guardrail["Guardrail: mask PII, block injection"]
+    guardrail -->|blocked| aggregate
+    guardrail --> supervisor["Supervisor (Gemini): intent and ordered agent plan"]
     supervisor --> dispatch{"Dispatch"}
-    dispatch -- "next agent in plan" --> customer["Customer agent"]
-    dispatch -- "next agent in plan" --> fraud["Fraud & Risk agent"]
-    dispatch -- "next agent in plan" --> credit["Credit & Loan agent"]
-    dispatch -- "next agent in plan" --> compliance["Compliance agent · RAG"]
-    customer & fraud & credit & compliance -- "no sensitive action" --> dispatch
-    fraud & credit -- "sensitive tool requested" --> approval[["Approval · interrupt()<br/>waits for Confirm / Cancel"]]
-    approval --> dispatch
-    dispatch -- "plan finished" --> aggregate["Aggregate<br/>1 answer passes through · 2+ merged by Gemini"]
+    dispatch -->|next agent in plan| customer["Customer agent"]
+    dispatch -->|next agent in plan| fraud["Fraud and Risk agent"]
+    dispatch -->|next agent in plan| credit["Credit and Loan agent"]
+    dispatch -->|next agent in plan| compliance["Compliance agent (RAG)"]
+    customer -->|done| dispatch
+    compliance -->|done| dispatch
+    fraud -->|no sensitive action| dispatch
+    credit -->|no sensitive action| dispatch
+    fraud -->|sensitive tool requested| approval["Approval: interrupt, waits for Confirm or Cancel"]
+    credit -->|sensitive tool requested| approval
+    approval -->|resumed| dispatch
+    dispatch -->|plan finished| aggregate["Aggregate: 1 answer passes through, 2 or more merged by Gemini"]
     aggregate --> endNode(["END"])
 ```
 
