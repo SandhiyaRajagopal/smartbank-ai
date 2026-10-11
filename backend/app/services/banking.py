@@ -96,12 +96,15 @@ def list_transactions(db: Session, customer_id: int, limit: int = 20, days: int 
 
 def spending_summary(db: Session, customer_id: int, days: int = 30) -> dict:
     since = datetime.now() - timedelta(days=days)
+    in_period = (Transaction.account_id.in_(_account_ids(db, customer_id)), Transaction.timestamp >= since)
+    # only completed payments: declined ones never moved money, and flagged (suspected fraud) ones are
+    # under review - counting them would make fraud look like the customer's own spending
     rows = db.execute(
         select(Transaction.category, Transaction.direction, func.sum(Transaction.amount), func.count())
-        .where(Transaction.account_id.in_(_account_ids(db, customer_id)),
-               Transaction.timestamp >= since, Transaction.status != "DECLINED")
+        .where(*in_period, Transaction.status == "COMPLETED")
         .group_by(Transaction.category, Transaction.direction)
     ).all()
+    flagged = db.scalar(select(func.count()).where(*in_period, Transaction.status == "FLAGGED"))
     spend = {cat: round(total, 2) for cat, direction, total, _ in rows if direction == "DEBIT"}
     income = sum(total for _, direction, total, _ in rows if direction == "CREDIT")
     total_spend = sum(spend.values())
@@ -111,6 +114,7 @@ def spending_summary(db: Session, customer_id: int, days: int = 30) -> dict:
         "total_spent": round(total_spend, 2),
         "total_received": round(income, 2),
         "net_cashflow": round(income - total_spend, 2),
+        "flagged_transactions_excluded": flagged,
         "by_category": [{"category": k, "amount": v, "share": round(v / total_spend, 3) if total_spend else 0}
                         for k, v in top],
     }
@@ -171,16 +175,22 @@ def record_transaction(db: Session, customer_id: int, *, amount: float, merchant
             txn.risk_score, txn.risk_level, txn.risk_reasons = risk.score, risk.level, risk.reasons
             if risk.level == "HIGH":
                 txn.status = "FLAGGED"
-        account.balance -= amount
+            # a purchase larger than the balance is declined (still risk-scored, so fraud attempts alert)
+            if amount > account.balance:
+                txn.status = "DECLINED"
+                txn.risk_reasons = [*txn.risk_reasons, "Insufficient funds"]
+        if txn.status != "DECLINED":
+            account.balance -= amount
     else:
         account.balance += amount
 
     db.add(txn)
     db.flush()
     if txn.risk_level == "HIGH":
+        outcome = "was declined (insufficient funds) but" if txn.status == "DECLINED" else "was"
         alert = Alert(customer_id=customer_id, transaction_id=txn.id, type="FRAUD", severity="CRITICAL",
                       title="Suspicious transaction detected",
-                      message=f"Rs {amount:,.0f} at {merchant} ({city}, {country}) was flagged - risk score "
+                      message=f"Rs {amount:,.0f} at {merchant} ({city}, {country}) {outcome} flagged - risk score "
                               f"{txn.risk_score}/100. Ask the assistant about it or block your card.")
         db.add(alert)
     return txn, alert

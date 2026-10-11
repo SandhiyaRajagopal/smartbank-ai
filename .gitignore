@@ -24,3 +24,6 @@ Reference Image*.jpeg
 
 .vscode/
 .idea/
+
+# locally generated demo recordings
+demo_video/

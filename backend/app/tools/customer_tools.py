@@ -27,8 +27,9 @@ def make_customer_tools(customer_id: int) -> list:
                                                      category=category)
 
     def get_spending_summary(days: int = 30) -> dict:
-        """Summarise spending by category over the last N days: total spent, total received,
-        net cash flow and each category's amount and share of spend."""
+        """Summarise completed spending by category over the last N days: total spent, total received,
+        net cash flow and each category's amount and share of spend. Flagged (suspected fraud)
+        transactions are excluded and counted in flagged_transactions_excluded."""
         return in_session(banking.spending_summary)(customer_id, days=days)
 
     return [make_tool(f) for f in
